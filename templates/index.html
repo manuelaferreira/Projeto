@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aproxima</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            flex-direction:column;
+            align-items: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        #btn-localizar {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .ong-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 30px;
+            justify-content: center;
+            max-width: 1200px;
+            width: 100%;
+        }
+        .ong-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .ong-card h2 {
+            font-size: 1.2em;
+            margin: 0;
+            color: #007BFF;
+        }
+        .ong-card p {
+            margin: 5px 0;
+        }
+        .ong-card a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .ong-card a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Localizar a ONG mais próxima</h1>
+    <button id="btn-localizar">Obter localização</button>
+    <div id="resultado" class="ong-container"></div>
+
+    <script>
+        document.getElementById('btn-localizar').addEventListener('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        enviarLocalizacao(latitude, longitude);
+                    },
+                    function(error) {
+                        document.getElementById('resultado').innerText = 'Erro ao obter localização:' + error.message;
+                    }
+                );
+            } else {
+                document.getElementById('resultado').innerText = 'Geolocalização não é suportada neste navegador.';
+            }
+        });
+
+        function enviarLocalizacao(latitude, longitude) {
+            fetch('/definir_localizacao', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    latitude: latitude,
+                    longitude: longitude
+                }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na requisição:' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const resultadoDiv = document.getElementById('resultado');
+                resultadoDiv.innerHTML = '';
+
+                if (data.length === 0) {
+                    resultadoDiv.innerHTML = '<p>Nenhuma ONG foi encontrada próxima à sua localização.</p>';
+                    return;
+                }
+
+                data.forEach(ong => {
+                    const ongCard = document.createElement('div');
+                    ongCard.classList.add('ong-card');
+                    ongCard.innerHTML = `
+                        <h2>${ong.nome}</h2>
+                        <p><strong>Endereço:</strong> ${ong.endereco}</p>
+                        <p><strong>Distância:</strong> ${ong.distancia.toFixed(2)} km</p>
+                    `;
+                    resultadoDiv.appendChild(ongCard);    
+                });
+            })
+            .catch(error => {
+                document.getElementById('resultado').innerText = 'Erro:' + error.message;
+            })
+        }
+    </script>
+</body>
+</html>
+
+
