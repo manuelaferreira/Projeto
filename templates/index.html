@@ -7,26 +7,44 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
+            background-color: white; 
+            color: #333; 
             display: flex;
-            flex-direction:column;
+            flex-direction: column;
             align-items: center;
             padding: 20px;
+            margin: 0;
+            height: 100vh;
+            justify-content: center;  
         }
+
         h1 {
-            color: #333;
+            color: #000;
+            font-size: 24px;
+            margin-bottom: 20px;
         }
+
         #btn-localizar {
-            padding: 10px 20px;
+            padding: 12px 25px;
             font-size: 16px;
             margin-bottom: 20px;
             cursor: pointer;
-            background-color: #007BFF;
+            background-color: #1d4d32;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
         }
+
+        #btn-localizar:hover {
+            background-color: #155e24; 
+        }
+
+        #loading {
+            display: none;
+            margin-bottom: 20px;
+        }
+
         .ong-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -35,40 +53,72 @@
             max-width: 1200px;
             width: 100%;
         }
+
         .ong-card {
-            background-color: white;
+            background-color: #fff; 
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 15px;
+            padding: 20px;
             width: 300px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 15px;
+            border: 1px solid #e0e0e0; 
         }
+
         .ong-card h2 {
             font-size: 1.2em;
             margin: 0;
-            color: #007BFF;
+            color: #1d4d32; 
         }
+
         .ong-card p {
             margin: 5px 0;
+            color: #333; 
         }
+
         .ong-card a {
-            color: #007BFF;
+            color: #1d4d32; 
             text-decoration: none;
         }
+
         .ong-card a:hover {
             text-decoration: underline;
+        }
+
+        .error, .success {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
         }
     </style>
 </head>
 <body>
     <h1>Localizar a ONG mais próxima</h1>
     <button id="btn-localizar">Obter localização</button>
+    <div id="loading">Buscando sua localização...</div>
     <div id="resultado" class="ong-container"></div>
-
+    <div id="mensagem" class="error" style="display: none;"></div>
     <script>
         document.getElementById('btn-localizar').addEventListener('click', function() {
+            document.getElementById('loading').style.display = 'block';  // Mostrar carregamento
+            document.getElementById('resultado').innerHTML = '';  // Limpar resultados anteriores
+            document.getElementById('mensagem').style.display = 'none';  // Esconder mensagens de erro ou sucesso
+
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
@@ -77,11 +127,15 @@
                         enviarLocalizacao(latitude, longitude);
                     },
                     function(error) {
-                        document.getElementById('resultado').innerText = 'Erro ao obter localização:' + error.message;
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('mensagem').innerText = 'Erro ao obter localização: ' + error.message;
+                        document.getElementById('mensagem').style.display = 'block';
                     }
                 );
             } else {
-                document.getElementById('resultado').innerText = 'Geolocalização não é suportada neste navegador.';
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('mensagem').innerText = 'Geolocalização não é suportada neste navegador.';
+                document.getElementById('mensagem').style.display = 'block';
             }
         });
 
@@ -98,36 +152,45 @@
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Erro na requisição:' + response.status);
+                    throw new Error('Erro na requisição: ' + response.status);
                 }
                 return response.json();
             })
             .then(data => {
+                document.getElementById('loading').style.display = 'none';  // Esconder o carregamento
+
                 const resultadoDiv = document.getElementById('resultado');
                 resultadoDiv.innerHTML = '';
+
+                if (data.erro) {
+                    document.getElementById('mensagem').innerText = data.erro;
+                    document.getElementById('mensagem').style.display = 'block';
+                    return;
+                }
 
                 if (data.length === 0) {
                     resultadoDiv.innerHTML = '<p>Nenhuma ONG foi encontrada próxima à sua localização.</p>';
                     return;
                 }
-
+                
                 data.forEach(ong => {
                     const ongCard = document.createElement('div');
                     ongCard.classList.add('ong-card');
                     ongCard.innerHTML = `
                         <h2>${ong.nome}</h2>
                         <p><strong>Endereço:</strong> ${ong.endereco}</p>
-                        <p><strong>Distância:</strong> ${ong.distancia.toFixed(2)} km</p>
+                        <p><strong>Necessidades:</strong> ${ong.necessidades || 'Não especificado'}</p>
+                        <p><strong>Distância:</strong> ${ong.distancia} km</p>
                     `;
                     resultadoDiv.appendChild(ongCard);    
                 });
             })
             .catch(error => {
-                document.getElementById('resultado').innerText = 'Erro:' + error.message;
-            })
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('mensagem').innerText = 'Erro: ' + error.message;
+                document.getElementById('mensagem').style.display = 'block';
+            });
         }
     </script>
 </body>
 </html>
-
-
